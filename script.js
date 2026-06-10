@@ -399,7 +399,8 @@ function buildCard(d) {
   const isNew = isToday(d.date);
 
   return `
-    <div class="feed-card" onclick="flyToPin('${esc(d._id)}')">
+   <div class="feed-card"
+     onclick="openInstagram('${esc(d.instaUrl)}','${esc(d._id)}')">
       <div class="fc-flag">${flag}</div>
       <div class="fc-body">
         <div class="fc-loc">📍 ${esc(d.location)}</div>
