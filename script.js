@@ -1,6 +1,7 @@
+
 /* =============================================
-   한복체크인 — PRODUCTION MAP SCRIPT
-   (Stable + Ocean Labels Removed)
+   한복체크인 — PRODUCTION SAFE VERSION
+   (NO STYLE MANIPULATION / NO LAYER TOUCHING)
    ============================================= */
 
 /* ─────────────────────────────────────────────
@@ -25,7 +26,7 @@ let currentPage = 1;
 let mbMap = null;
 
 /* ─────────────────────────────────────────────
-   MAP INIT
+   MAP INIT (NO STYLE MANIPULATION)
 ──────────────────────────────────────────── */
 function initMap() {
   mapboxgl.accessToken = CONFIG.MAPBOX_TOKEN;
@@ -39,43 +40,10 @@ function initMap() {
   });
 
   mbMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-  mbMap.on('load', () => {
-    removeOceanLabels(); // 핵심
-  });
 }
 
 /* ─────────────────────────────────────────────
-   🌊 OCEAN LABEL REMOVAL (PRODUCTION SAFE)
-──────────────────────────────────────────── */
-function removeOceanLabels() {
-  if (!mbMap || !mbMap.isStyleLoaded()) return;
-
-  const layers = mbMap.getStyle().layers;
-  if (!layers) return;
-
-  layers.forEach(layer => {
-    if (!layer || layer.type !== 'symbol') return;
-
-    const id = (layer.id || '').toLowerCase();
-
-    const isOcean =
-      id.includes('ocean') ||
-      id.includes('sea') ||
-      id.includes('water');
-
-    if (isOcean) {
-      try {
-        mbMap.setLayoutProperty(layer.id, 'visibility', 'none');
-      } catch (e) {
-        // 일부 시스템 레이어 보호됨 → 무시
-      }
-    }
-  });
-}
-
-/* ─────────────────────────────────────────────
-   GEOCODE (SAFE + CACHE)
+   SAFE GEOCODE (CACHE + FAIL SAFE)
 ──────────────────────────────────────────── */
 async function geocode(location, city, country) {
   const query = [location, city, country].filter(Boolean).join(', ');
@@ -92,10 +60,10 @@ async function geocode(location, city, country) {
     if (!res.ok) return null;
 
     const data = await res.json();
-    const coords = data.features?.[0]?.geometry?.coordinates;
+    const coords = data.features?.[0]?.geometry?.coordinates || null;
 
-    CONFIG._geoCache[query] = coords || null;
-    return coords || null;
+    CONFIG._geoCache[query] = coords;
+    return coords;
 
   } catch {
     return null;
@@ -103,7 +71,7 @@ async function geocode(location, city, country) {
 }
 
 /* ─────────────────────────────────────────────
-   BATCH GEOCODE
+   GEOCODE BATCH (STABLE)
 ──────────────────────────────────────────── */
 async function geocodeBatch(items, batchSize = 5) {
   for (let i = 0; i < items.length; i += batchSize) {
@@ -131,7 +99,10 @@ function toGeoJSON(data) {
     type: 'FeatureCollection',
     features: data.map(d => ({
       type: 'Feature',
-      geometry: { type: 'Point', coordinates: d.coords },
+      geometry: {
+        type: 'Point',
+        coordinates: d.coords
+      },
       properties: {
         _id: d._id,
         name: d.name,
@@ -148,7 +119,7 @@ function toGeoJSON(data) {
 }
 
 /* ─────────────────────────────────────────────
-   PIN RENDER
+   MAP RENDER (SAFE ONLY)
 ──────────────────────────────────────────── */
 function addPinsToMap(data) {
   if (!mbMap || !mbMap.isStyleLoaded()) return;
@@ -196,8 +167,10 @@ function addPinsToMap(data) {
     const lats = valid.map(d => d.coords[1]);
 
     mbMap.fitBounds(
-      [[Math.min(...lngs), Math.min(...lats)],
-       [Math.max(...lngs), Math.max(...lats)]],
+      [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)]
+      ],
       { padding: 80, duration: 800 }
     );
   }
@@ -212,23 +185,25 @@ async function loadData() {
   try {
     const res = await fetch(CONFIG.OPENSHEET_URL);
     rows = await res.json();
-  } catch {
-    console.error('DATA LOAD FAILED');
+  } catch (err) {
+    console.error('DATA LOAD FAILED', err);
     return;
   }
 
-  const parsed = rows.map((r, i) => ({
-    _id: String(i),
-    name: r['닉네임'] || '익명',
-    instaId: r['인스타그램 ID'] || '',
-    location: r['체크인 장소명'] || '',
-    city: r['체크인한 도시'] || '',
-    country: r['체크인한 국가'] || '',
-    note: r['체크인 한줄소개 🫡'] || '',
-    instaUrl: r['인스타 게시물 URL'] || '',
-    date: r['타임스탬프'] || '',
-    coords: null
-  })).filter(d => d.location);
+  const parsed = rows
+    .map((r, i) => ({
+      _id: String(i),
+      name: r['닉네임'] || '익명',
+      instaId: r['인스타그램 ID'] || '',
+      location: r['체크인 장소명'] || '',
+      city: r['체크인한 도시'] || '',
+      country: r['체크인한 국가'] || '',
+      note: r['체크인 한줄소개 🫡'] || '',
+      instaUrl: r['인스타 게시물 URL'] || '',
+      date: r['타임스탬프'] || '',
+      coords: null
+    }))
+    .filter(d => d.location);
 
   allData = parsed;
 
