@@ -29,12 +29,12 @@ const CONFIG = {
 
   MAPBOX_TOKEN: 'pk.eyJ1IjoiaGFuYm9rY2VudGVyIiwiYSI6ImNtcTZjbmUxbDAzbHozMnBrczh6dGV5YzQifQ.b0hpmMQUslTf_3esWSQ52Q',
 
-  FORM_URL: 'https://docs.google.com/forms/d/e/1FAIpQLSc3ZvvZKY-e9ibFgXxXhpd39Fvysix1nMwLA8xWuBY5Dg74aw/viewform?usp=dialog'
-}// ← 구글 폼 링크로 교체
-  ITEMS_PER_PAGE: 20,
-  _geoCache: {},  // geocoding 결과 캐시 (세션 내 중복 요청 방지)
-};
+  FORM_URL: 'https://docs.google.com/forms/d/e/1FAIpQLSc3ZvvZKY-e9ibFgXxXhpd39Fvysix1nMwLA8xWuBY5Dg74aw/viewform?usp=dialog',
 
+  ITEMS_PER_PAGE: 20,
+
+  _geoCache: {}
+};
 /* ─────────────────────────────────────────────
    국가명 → 국기 이모지
    국가코드 없이 국가 이름만으로 변환합니다
@@ -625,7 +625,8 @@ function initPanel() {
   }, { passive: true });
 
   // 폼 링크
-  document.getElementById('formLink').href = https://docs.google.com/forms/d/e/1FAIpQLSc3ZvvZKY-e9ibFgXxXhpd39Fvysix1nMwLA8xWuBY5Dg74aw/viewform?usp=dialog;
+document.getElementById('formLink').href =
+  'https://docs.google.com/forms/d/e/1FAIpQLSc3ZvvZKY-e9ibFgXxXhpd39Fvysix1nMwLA8xWuBY5Dg74aw/viewform?usp=dialog';
 }
 
 /* ─────────────────────────────────────────────
