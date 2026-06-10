@@ -39,6 +39,43 @@ const CONFIG = {
    국가명 → 국기 이모지
    국가코드 없이 국가 이름만으로 변환합니다
    ───────────────────────────────────────────── */
+
+/* ===== Map Init ===== */
+const mbMap = new mapboxgl.Map({ ... });
+
+/* ===== Utility Functions ===== */
+function removeOceanLabels() {
+  if (!mbMap || !mbMap.isStyleLoaded()) return;
+
+  const layers = mbMap.getStyle().layers;
+  if (!layers) return;
+
+  layers.forEach(layer => {
+    if (!layer?.id) return;
+
+    const isOcean =
+      layer.id.includes('ocean') ||
+      layer.id.includes('water') ||
+      layer.id.includes('sea');
+
+    if (isOcean && layer.type === 'symbol') {
+      mbMap.setLayoutProperty(layer.id, 'visibility', 'none');
+    }
+  });
+}
+
+/* ===== Map Load Logic ===== */
+if (mbMap.isStyleLoaded()) {
+  removeOceanLabels();
+  addPinsToMap(allData.filter(d => d.coords));
+} else {
+  mbMap.once('load', () => {
+    removeOceanLabels();
+    addPinsToMap(allData.filter(d => d.coords));
+  });
+}
+
+
 const COUNTRY_FLAG_MAP = {
   // 한국어 국가명
   '대한민국': '🇰🇷', '한국': '🇰🇷',
