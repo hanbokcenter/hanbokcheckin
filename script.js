@@ -581,10 +581,16 @@ async function geocodeBatch(items, batchSize = 5) {
   );
 }));
 
-    // 배치마다 지도 핀 업데이트
-    if (mbMap.isStyleLoaded()) {
-      addPinsToMap(allData.filter(d => d.coords));
-    }
+console.log(
+  'BEFORE ADD',
+  allData.filter(d => d.coords)
+);
+
+// 배치마다 지도 핀 업데이트
+
+if (mbMap.isStyleLoaded()) {
+  addPinsToMap(allData.filter(d => d.coords));
+}
 
     // 다음 배치 전 대기 (Mapbox API rate limit 방지)
     if (i + batchSize < items.length) {
