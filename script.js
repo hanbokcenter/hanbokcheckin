@@ -21,7 +21,7 @@
    체크인한 도시                    ← 폼 질문 4  (geocoding 정확도)
    체크인한 국가                    ← 폼 질문 5  (geocoding 정확도 + 국기)
    체크인 한줄소개 🫡               ← 폼 질문 6
-   인스타 게시물 URL  ← 폼 질문 7
+   #한복체크인 참여 인스타그램 게시물 url  ← 폼 질문 7
 */
 
 const CONFIG = {
@@ -39,43 +39,6 @@ const CONFIG = {
    국가명 → 국기 이모지
    국가코드 없이 국가 이름만으로 변환합니다
    ───────────────────────────────────────────── */
-
-/* ===== Map Init ===== */
-const mbMap = new mapboxgl.Map({ ... });
-
-/* ===== Utility Functions ===== */
-function removeOceanLabels() {
-  if (!mbMap || !mbMap.isStyleLoaded()) return;
-
-  const layers = mbMap.getStyle().layers;
-  if (!layers) return;
-
-  layers.forEach(layer => {
-    if (!layer?.id) return;
-
-    const isOcean =
-      layer.id.includes('ocean') ||
-      layer.id.includes('water') ||
-      layer.id.includes('sea');
-
-    if (isOcean && layer.type === 'symbol') {
-      mbMap.setLayoutProperty(layer.id, 'visibility', 'none');
-    }
-  });
-}
-
-/* ===== Map Load Logic ===== */
-if (mbMap.isStyleLoaded()) {
-  removeOceanLabels();
-  addPinsToMap(allData.filter(d => d.coords));
-} else {
-  mbMap.once('load', () => {
-    removeOceanLabels();
-    addPinsToMap(allData.filter(d => d.coords));
-  });
-}
-
-
 const COUNTRY_FLAG_MAP = {
   // 한국어 국가명
   '대한민국': '🇰🇷', '한국': '🇰🇷',
@@ -595,36 +558,17 @@ async function loadData() {
   hideLoading();
 
   // 지도 스타일 로드 완료 후 핀 초기화
-function removeOceanLabels() {
-  const layers = mbMap.getStyle().layers;
-
-  layers.forEach(layer => {
-    if (!layer.id) return;
-
-    const isOcean =
-      layer.id.includes('ocean') ||
-      layer.id.includes('water') ||
-      layer.id.includes('sea');
-
-    if (isOcean && layer.type === 'symbol') {
-      mbMap.setLayoutProperty(layer.id, 'visibility', 'none');
-    }
-  });
-}
-
-
-
 await geocodeBatch(parsed);
 
 if (mbMap.isStyleLoaded()) {
-    removeOceanLabels();
   addPinsToMap(allData.filter(d => d.coords));
 } else {
   mbMap.once('load', () => {
-     removeOceanLabels();
     addPinsToMap(allData.filter(d => d.coords));
   });
 }
+}
+
 /* Geocoding 배치 처리 */
 async function geocodeBatch(items, batchSize = 5) {
   for (let i = 0; i < items.length; i += batchSize) {
