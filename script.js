@@ -575,14 +575,16 @@ function removeOceanLabels() {
   });
 }
 
-mbMap.on('styledata', removeOceanLabels);
+
 
 await geocodeBatch(parsed);
 
 if (mbMap.isStyleLoaded()) {
+    removeOceanLabels();
   addPinsToMap(allData.filter(d => d.coords));
 } else {
   mbMap.once('load', () => {
+     removeOceanLabels();
     addPinsToMap(allData.filter(d => d.coords));
   });
 }
