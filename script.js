@@ -562,6 +562,9 @@ async function loadData() {
 
   // Geocoding 배치 실행 (5개씩, 200ms 간격)
   await geocodeBatch(parsed);
+   addPinsToMap(
+  allData.filter(d => d.coords)
+);
 }
 
 /* Geocoding 배치 처리 */
