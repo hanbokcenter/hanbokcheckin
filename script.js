@@ -403,8 +403,6 @@ function buildCard(d) {
      onclick="openInstagram('${esc(d.instaUrl)}','${esc(d._id)}')">
 
      window.openInstagram = (url, id) => {
-
-  if (url && url.startsWith('http')) {
     window.open(url, '_blank');
     return;
   }
