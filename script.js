@@ -403,11 +403,12 @@ function buildCard(d) {
      onclick="openInstagram('${esc(d.instaUrl)}','${esc(d._id)}')">
 
      window.openInstagram = (url, id) => {
-    window.open(url, '_blank');
-    return;
+     if (url && url.startsWith('http')) {
+          window.open(url, '_blank');
+          return;
   }
 
-  flyToPin(id);
+     flyToPin(id);
 };
 
       <div class="fc-flag">${flag}</div>
