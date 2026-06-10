@@ -1,5 +1,6 @@
 /* =============================================
-   한복체크인 — STABLE SCRIPT (FULL REWRITE)
+   한복체크인 — PRODUCTION MAP SCRIPT
+   (Stable + Ocean Labels Removed)
    ============================================= */
 
 /* ─────────────────────────────────────────────
@@ -38,10 +39,43 @@ function initMap() {
   });
 
   mbMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+  mbMap.on('load', () => {
+    removeOceanLabels(); // 핵심
+  });
 }
 
 /* ─────────────────────────────────────────────
-   GEOCODE (SAFE)
+   🌊 OCEAN LABEL REMOVAL (PRODUCTION SAFE)
+──────────────────────────────────────────── */
+function removeOceanLabels() {
+  if (!mbMap || !mbMap.isStyleLoaded()) return;
+
+  const layers = mbMap.getStyle().layers;
+  if (!layers) return;
+
+  layers.forEach(layer => {
+    if (!layer || layer.type !== 'symbol') return;
+
+    const id = (layer.id || '').toLowerCase();
+
+    const isOcean =
+      id.includes('ocean') ||
+      id.includes('sea') ||
+      id.includes('water');
+
+    if (isOcean) {
+      try {
+        mbMap.setLayoutProperty(layer.id, 'visibility', 'none');
+      } catch (e) {
+        // 일부 시스템 레이어 보호됨 → 무시
+      }
+    }
+  });
+}
+
+/* ─────────────────────────────────────────────
+   GEOCODE (SAFE + CACHE)
 ──────────────────────────────────────────── */
 async function geocode(location, city, country) {
   const query = [location, city, country].filter(Boolean).join(', ');
@@ -69,14 +103,14 @@ async function geocode(location, city, country) {
 }
 
 /* ─────────────────────────────────────────────
-   BATCH GEOCODE (STABLE)
+   BATCH GEOCODE
 ──────────────────────────────────────────── */
 async function geocodeBatch(items, batchSize = 5) {
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
 
     await Promise.all(
-      batch.map(async (item) => {
+      batch.map(async item => {
         try {
           item.coords = await geocode(item.location, item.city, item.country);
         } catch {
@@ -114,7 +148,7 @@ function toGeoJSON(data) {
 }
 
 /* ─────────────────────────────────────────────
-   MAP RENDER (SAFE SINGLE SOURCE)
+   PIN RENDER
 ──────────────────────────────────────────── */
 function addPinsToMap(data) {
   if (!mbMap || !mbMap.isStyleLoaded()) return;
@@ -170,7 +204,7 @@ function addPinsToMap(data) {
 }
 
 /* ─────────────────────────────────────────────
-   LOAD DATA
+   DATA LOAD
 ──────────────────────────────────────────── */
 async function loadData() {
   let rows;
