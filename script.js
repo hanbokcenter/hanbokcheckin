@@ -554,17 +554,15 @@ async function loadData() {
   hideLoading();
 
   // 지도 스타일 로드 완료 후 핀 초기화
-  if (mbMap.isStyleLoaded()) {
-    addPinsToMap([]);  // 빈 소스 먼저 등록
- } else {
-    mbMap.once('load', () => addPinsToMap([]));
-  }
+await geocodeBatch(parsed);
 
-  // Geocoding 배치 실행 (5개씩, 200ms 간격)
-  await geocodeBatch(parsed);
-   addPinsToMap(
-  allData.filter(d => d.coords)
-);
+if (mbMap.isStyleLoaded()) {
+  addPinsToMap(allData.filter(d => d.coords));
+} else {
+  mbMap.once('load', () => {
+    addPinsToMap(allData.filter(d => d.coords));
+  });
+}
 }
 
 /* Geocoding 배치 처리 */
@@ -591,9 +589,9 @@ console.log(
 
 // 배치마다 지도 핀 업데이트
 
-if (mbMap.isStyleLoaded()) {
-  addPinsToMap(allData.filter(d => d.coords));
-}
+//if (mbMap.isStyleLoaded()) {
+  //addPinsToMap(allData.filter(d => d.coords));
+//}
 
     // 다음 배치 전 대기 (Mapbox API rate limit 방지)
     if (i + batchSize < items.length) {
