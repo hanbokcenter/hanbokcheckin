@@ -558,6 +558,25 @@ async function loadData() {
   hideLoading();
 
   // 지도 스타일 로드 완료 후 핀 초기화
+function removeOceanLabels() {
+  const layers = mbMap.getStyle().layers;
+
+  layers.forEach(layer => {
+    if (!layer.id) return;
+
+    const isOcean =
+      layer.id.includes('ocean') ||
+      layer.id.includes('water') ||
+      layer.id.includes('sea');
+
+    if (isOcean && layer.type === 'symbol') {
+      mbMap.setLayoutProperty(layer.id, 'visibility', 'none');
+    }
+  });
+}
+
+mbMap.on('styledata', removeOceanLabels);
+
 await geocodeBatch(parsed);
 
 if (mbMap.isStyleLoaded()) {
@@ -567,8 +586,6 @@ if (mbMap.isStyleLoaded()) {
     addPinsToMap(allData.filter(d => d.coords));
   });
 }
-}
-
 /* Geocoding 배치 처리 */
 async function geocodeBatch(items, batchSize = 5) {
   for (let i = 0; i < items.length; i += batchSize) {
