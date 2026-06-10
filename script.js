@@ -554,12 +554,12 @@ async function loadData() {
   hideLoading();
 
   // 지도 스타일 로드 완료 후 핀 초기화
-  if (mbMap.isStyleLoaded()) {
-    addPinsToMap([]);   // 빈 소스 먼저 등록
-  } else {
+  //if (mbMap.isStyleLoaded()) {
+    addPinsToMap([]); //  // 빈 소스 먼저 등록
+ // } else {
     mbMap.once('load', () => addPinsToMap([]));
   }
-
+//
   // Geocoding 배치 실행 (5개씩, 200ms 간격)
   await geocodeBatch(parsed);
 }
