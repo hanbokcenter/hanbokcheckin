@@ -257,6 +257,8 @@ function toGeoJSON(data) {
    지도에 핀 추가 / 업데이트
    ───────────────────────────────────────────── */
 function addPinsToMap(data) {
+   console.log('PIN DATA:', data);
+console.log('PIN COUNT:', data.length);
   const valid = data.filter(d => d.coords);
 
   // 소스가 이미 있으면 데이터만 교체
@@ -568,8 +570,16 @@ async function geocodeBatch(items, batchSize = 5) {
     const batch = items.slice(i, i + batchSize);
 
     await Promise.all(batch.map(async item => {
-      item.coords = await geocode(item.location, item.city, item.country);
-    }));
+  item.coords = await geocode(item.location, item.city, item.country);
+
+  console.log(
+    'GEOCODE:',
+    item.location,
+    item.city,
+    item.country,
+    item.coords
+  );
+}));
 
     // 배치마다 지도 핀 업데이트
     if (mbMap.isStyleLoaded()) {
