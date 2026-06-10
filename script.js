@@ -530,7 +530,7 @@ async function loadData() {
       city:     r['체크인한 도시']                            || '',
       country:  r['체크인한 국가']                            || '',
       note:     r['체크인 한줄소개 🫡']                       || '',
-      instaUrl: r['#한복체크인 참여 인스타그램 게시물 url']    || '',
+      instaUrl: r['인스타 게시물 URL']    || '',
       coords:   null,  // geocoding 후 채워짐
     }))
     .filter(r => r.location)   // 장소명 없는 행 제외
