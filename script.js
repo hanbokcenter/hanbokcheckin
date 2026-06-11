@@ -1,12 +1,13 @@
+/* =============================================
+   한복체크인 — LEAFLET VERSION (STABLE)
+   ============================================= */
 <link
   rel="stylesheet"
   href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
 />
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-/* =============================================
-   한복체크인 — LEAFLET VERSION (STABLE)
-   ============================================= */
+
 
 /* ─────────────────────────────
    CONFIG
