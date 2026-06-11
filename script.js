@@ -1,31 +1,20 @@
 /* =============================================
-   한복체크인 — STABLE SCRIPT (FULL REWRITE)
+   한복체크인 — FINAL STABLE VERSION (NO LOOP)
    ============================================= */
 
-/* ─────────────────────────────────────────────
-   CONFIG
-──────────────────────────────────────────── */
 const CONFIG = {
   OPENSHEET_URL: 'https://opensheet.elk.sh/168jH8wNnXTdCa8kHaBl0QXnga33Divzo1U4Q-eg5VBQ/응답',
-
   MAPBOX_TOKEN: 'YOUR_MAPBOX_TOKEN',
-
-  FORM_URL: 'https://docs.google.com/forms/d/e/1FAIpQLSc3ZvvZKY-e9ibFgXxXhpd39Fvysix1nMwLA8xWuBY5Dg74aw/viewform?usp=dialog',
-
-  ITEMS_PER_PAGE: 20,
   _geoCache: {}
 };
 
-/* ─────────────────────────────────────────────
-   STATE
-──────────────────────────────────────────── */
 let allData = [];
-let currentPage = 1;
 let mbMap = null;
+let mapReady = false;
 
-/* ─────────────────────────────────────────────
-   MAP INIT
-──────────────────────────────────────────── */
+/* ─────────────────────────────
+   MAP INIT (ONLY ONCE SAFE)
+──────────────────────────── */
 function initMap() {
   mapboxgl.accessToken = CONFIG.MAPBOX_TOKEN;
 
@@ -37,119 +26,87 @@ function initMap() {
     attributionControl: false
   });
 
-  mbMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
+  mbMap.on('load', () => {
+    mapReady = true;
+    tryRender();
+  });
 }
 
-/* ─────────────────────────────────────────────
-   GEOCODE (SAFE)
-──────────────────────────────────────────── */
+/* ─────────────────────────────
+   SAFE GEOCODE
+──────────────────────────── */
 async function geocode(location, city, country) {
-  const query = [location, city, country].filter(Boolean).join(', ');
-  if (!query) return null;
-  if (CONFIG._geoCache[query]) return CONFIG._geoCache[query];
+  const q = [location, city, country].filter(Boolean).join(',');
+  if (!q) return null;
+  if (CONFIG._geoCache[q]) return CONFIG._geoCache[q];
 
   try {
     const url =
       `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
-      encodeURIComponent(query) +
-      `.json?access_token=${CONFIG.MAPBOX_TOKEN}&limit=1&language=ko`;
+      encodeURIComponent(q) +
+      `.json?access_token=${CONFIG.MAPBOX_TOKEN}&limit=1`;
 
     const res = await fetch(url);
-    if (!res.ok) return null;
-
     const data = await res.json();
-    const coords = data.features?.[0]?.geometry?.coordinates;
 
-    CONFIG._geoCache[query] = coords || null;
-    return coords || null;
+    const coords = data.features?.[0]?.geometry?.coordinates || null;
+    CONFIG._geoCache[q] = coords;
+    return coords;
 
   } catch {
     return null;
   }
 }
 
-/* ─────────────────────────────────────────────
-   BATCH GEOCODE (STABLE)
-──────────────────────────────────────────── */
-async function geocodeBatch(items, batchSize = 5) {
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-
-    await Promise.all(
-      batch.map(async (item) => {
-        try {
-          item.coords = await geocode(item.location, item.city, item.country);
-        } catch {
-          item.coords = null;
-        }
-      })
-    );
-
-    await new Promise(r => setTimeout(r, 150));
+/* ─────────────────────────────
+   BATCH GEOCODE (NO BLOCK)
+──────────────────────────── */
+async function geocodeBatch(items) {
+  for (const item of items) {
+    item.coords = await geocode(item.location, item.city, item.country);
   }
 }
 
-/* ─────────────────────────────────────────────
+/* ─────────────────────────────
    GEOJSON
-──────────────────────────────────────────── */
+──────────────────────────── */
 function toGeoJSON(data) {
   return {
     type: 'FeatureCollection',
-    features: data.map(d => ({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: d.coords },
-      properties: {
-        _id: d._id,
-        name: d.name,
-        instaId: d.instaId,
-        location: d.location,
-        city: d.city,
-        country: d.country,
-        note: d.note,
-        instaUrl: d.instaUrl,
-        date: d.date
-      }
-    }))
+    features: data
+      .filter(d => d.coords)
+      .map(d => ({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: d.coords
+        },
+        properties: d
+      }))
   };
 }
 
-/* ─────────────────────────────────────────────
-   MAP RENDER (SAFE SINGLE SOURCE)
-──────────────────────────────────────────── */
-function addPinsToMap(data) {
-  if (!mbMap || !mbMap.isStyleLoaded()) return;
+/* ─────────────────────────────
+   MAP RENDER (ONLY WHEN READY)
+──────────────────────────── */
+function renderMap() {
+  if (!mapReady) return;
 
-  const valid = data.filter(d => d.coords);
+  const valid = allData.filter(d => d.coords);
 
   if (!mbMap.getSource('checkins')) {
     mbMap.addSource('checkins', {
       type: 'geojson',
-      data: toGeoJSON(valid),
-      cluster: true,
-      clusterRadius: 40
+      data: toGeoJSON(valid)
     });
 
     mbMap.addLayer({
       id: 'pins',
       type: 'circle',
       source: 'checkins',
-      filter: ['!', ['has', 'point_count']],
       paint: {
         'circle-radius': 7,
-        'circle-color': '#D4402A',
-        'circle-stroke-color': '#fff',
-        'circle-stroke-width': 2
-      }
-    });
-
-    mbMap.addLayer({
-      id: 'clusters',
-      type: 'circle',
-      source: 'checkins',
-      filter: ['has', 'point_count'],
-      paint: {
-        'circle-radius': 18,
-        'circle-color': '#4A90D9'
+        'circle-color': '#D4402A'
       }
     });
 
@@ -157,61 +114,57 @@ function addPinsToMap(data) {
     mbMap.getSource('checkins').setData(toGeoJSON(valid));
   }
 
-  if (valid.length > 0) {
+  if (valid.length) {
     const lngs = valid.map(d => d.coords[0]);
     const lats = valid.map(d => d.coords[1]);
 
     mbMap.fitBounds(
       [[Math.min(...lngs), Math.min(...lats)],
        [Math.max(...lngs), Math.max(...lats)]],
-      { padding: 80, duration: 800 }
+      { padding: 80, duration: 600 }
     );
   }
 }
 
-/* ─────────────────────────────────────────────
-   LOAD DATA
-──────────────────────────────────────────── */
-async function loadData() {
-  let rows;
-
-  try {
-    const res = await fetch(CONFIG.OPENSHEET_URL);
-    rows = await res.json();
-  } catch {
-    console.error('DATA LOAD FAILED');
-    return;
-  }
-
-  const parsed = rows.map((r, i) => ({
-    _id: String(i),
-    name: r['닉네임'] || '익명',
-    instaId: r['인스타그램 ID'] || '',
-    location: r['체크인 장소명'] || '',
-    city: r['체크인한 도시'] || '',
-    country: r['체크인한 국가'] || '',
-    note: r['체크인 한줄소개 🫡'] || '',
-    instaUrl: r['인스타 게시물 URL'] || '',
-    date: r['타임스탬프'] || '',
-    coords: null
-  })).filter(d => d.location);
-
-  allData = parsed;
-
-  await geocodeBatch(allData);
-
-  const render = () => addPinsToMap(allData);
-
-  if (mbMap.isStyleLoaded()) {
-    render();
-  } else {
-    mbMap.once('load', render);
+/* ─────────────────────────────
+   SAFE RENDER TRIGGER
+──────────────────────────── */
+function tryRender() {
+  if (mapReady && allData.length) {
+    renderMap();
   }
 }
 
-/* ─────────────────────────────────────────────
+/* ─────────────────────────────
+   LOAD DATA (STRICT ORDER)
+──────────────────────────── */
+async function loadData() {
+  try {
+    const res = await fetch(CONFIG.OPENSHEET_URL);
+    const rows = await res.json();
+
+    allData = rows.map((r, i) => ({
+      _id: String(i),
+      name: r['닉네임'] || '',
+      location: r['체크인 장소명'] || '',
+      city: r['체크인한 도시'] || '',
+      country: r['체크인한 국가'] || '',
+      instaUrl: r['인스타 게시물 URL'] || '',
+      coords: null
+    })).filter(d => d.location);
+
+    await geocodeBatch(allData);
+
+    tryRender();
+
+  } catch (e) {
+    console.error('LOAD FAILED', e);
+  }
+}
+
+/* ─────────────────────────────
    INIT
-──────────────────────────────────────────── */
+──────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
   loadData();
