@@ -1,5 +1,11 @@
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 /* =============================================
-   한복체크인 — CLEAN REBUILD v3 (STABLE)
+   한복체크인 — LEAFLET VERSION (STABLE)
    ============================================= */
 
 /* ─────────────────────────────
@@ -7,41 +13,35 @@
 ──────────────────────────── */
 const CONFIG = {
   OPENSHEET_URL: 'https://opensheet.elk.sh/168jH8wNnXTdCa8kHaBl0QXnga33Divzo1U4Q-eg5VBQ/응답',
-  MAPBOX_TOKEN: 'YOUR_MAPBOX_TOKEN',
   _geoCache: {}
 };
 
 /* ─────────────────────────────
-   STATE (CRITICAL)
+   STATE
 ──────────────────────────── */
 let allData = [];
 let map = null;
-let mapInitialized = false;
+let markersLayer = null;
 
 /* ─────────────────────────────
-   INIT MAP (GUARDED)
+   INIT MAP (LEAFLET)
 ──────────────────────────── */
 function initMap() {
-  if (mapInitialized) return;
-  mapInitialized = true;
-
-  mapboxgl.accessToken = CONFIG.MAPBOX_TOKEN;
-
-  map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/dark-v11',
-    center: [127, 36],
+  map = L.map('map', {
+    center: [36, 127],
     zoom: 2.5,
-    attributionControl: false
+    worldCopyJump: true
   });
 
-  map.on('load', () => {
-    console.log('MAP LOADED');
-  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CARTO'
+  }).addTo(map);
+
+  markersLayer = L.layerGroup().addTo(map);
 }
 
 /* ─────────────────────────────
-   SAFE GEOCODE
+   GEOCODE (MAPBOX API 유지)
 ──────────────────────────── */
 async function geocode(location, city, country) {
   const q = [location, city, country].filter(Boolean).join(',');
@@ -52,14 +52,21 @@ async function geocode(location, city, country) {
     const url =
       `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
       encodeURIComponent(q) +
-      `.json?access_token=${CONFIG.MAPBOX_TOKEN}&limit=1`;
+      `.json?access_token=YOUR_MAPBOX_TOKEN&limit=1`;
 
     const res = await fetch(url);
     const data = await res.json();
 
     const coords = data.features?.[0]?.geometry?.coordinates || null;
-    CONFIG._geoCache[q] = coords;
-    return coords;
+
+    if (coords) {
+      // Leaflet uses [lat, lng]
+      const converted = [coords[1], coords[0]];
+      CONFIG._geoCache[q] = converted;
+      return converted;
+    }
+
+    return null;
 
   } catch {
     return null;
@@ -67,7 +74,7 @@ async function geocode(location, city, country) {
 }
 
 /* ─────────────────────────────
-   BATCH GEOCODE (NON BLOCKING)
+   BATCH GEOCODE
 ──────────────────────────── */
 async function geocodeBatch(items) {
   for (const item of items) {
@@ -76,69 +83,50 @@ async function geocodeBatch(items) {
 }
 
 /* ─────────────────────────────
-   GEOJSON
+   RENDER MARKERS
 ──────────────────────────── */
-function toGeoJSON(data) {
-  return {
-    type: 'FeatureCollection',
-    features: data
-      .filter(d => d.coords)
-      .map(d => ({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: d.coords
-        },
-        properties: d
-      }))
-  };
-}
+function renderMarkers() {
+  if (!map) return;
 
-/* ─────────────────────────────
-   MAP RENDER (SINGLE SOURCE OF TRUTH)
-──────────────────────────── */
-function renderMap() {
-  if (!map || !map.isStyleLoaded()) return;
+  markersLayer.clearLayers();
 
   const valid = allData.filter(d => d.coords);
 
-  // SOURCE
-  if (!map.getSource('checkins')) {
-    map.addSource('checkins', {
-      type: 'geojson',
-      data: toGeoJSON(valid)
+  valid.forEach(d => {
+    const marker = L.circleMarker(d.coords, {
+      radius: 6,
+      color: '#fff',
+      weight: 2,
+      fillColor: '#D4402A',
+      fillOpacity: 0.9
     });
 
-    map.addLayer({
-      id: 'pins',
-      type: 'circle',
-      source: 'checkins',
-      paint: {
-        'circle-radius': 7,
-        'circle-color': '#D4402A',
-        'circle-stroke-color': '#fff',
-        'circle-stroke-width': 2
-      }
-    });
-  } else {
-    map.getSource('checkins').setData(toGeoJSON(valid));
-  }
+    marker.addTo(markersLayer);
 
-  // FIT
+    marker.bindPopup(`
+      <div style="font-family:sans-serif">
+        <b>📍 ${d.location}</b><br/>
+        👘 ${d.name}<br/>
+        🌏 ${d.country || ''}<br/>
+      </div>
+    `);
+
+    marker.on('click', () => {
+      map.setView(d.coords, 6, { animate: true });
+    });
+  });
+
+  // auto fit
   if (valid.length > 0) {
-    const lngs = valid.map(d => d.coords[0]);
-    const lats = valid.map(d => d.coords[1]);
-
-    map.fitBounds(
-      [[Math.min(...lngs), Math.min(...lats)],
-       [Math.max(...lngs), Math.max(...lats)]],
-      { padding: 80, duration: 600 }
+    const group = L.featureGroup(
+      valid.map(d => L.circleMarker(d.coords))
     );
+    map.fitBounds(group.getBounds(), { padding: [50, 50] });
   }
 }
 
 /* ─────────────────────────────
-   LOAD DATA (SAFE FLOW)
+   LOAD DATA
 ──────────────────────────── */
 async function loadData() {
   try {
@@ -152,34 +140,17 @@ async function loadData() {
         location: r['체크인 장소명'] || '',
         city: r['체크인한 도시'] || '',
         country: r['체크인한 국가'] || '',
-        instaUrl: r['인스타 게시물 URL'] || '',
         coords: null
       }))
       .filter(d => d.location);
 
-    // 1. 먼저 geocode
     await geocodeBatch(allData);
 
-    // 2. map render (무조건 안전하게)
-    waitForMap();
+    renderMarkers();
 
   } catch (e) {
-    console.error('LOAD ERROR', e);
+    console.error('LOAD FAILED', e);
   }
-}
-
-/* ─────────────────────────────
-   MAP WAIT LOOP (CRITICAL FIX)
-──────────────────────────── */
-function waitForMap() {
-  const check = () => {
-    if (map && map.isStyleLoaded()) {
-      renderMap();
-    } else {
-      requestAnimationFrame(check);
-    }
-  };
-  check();
 }
 
 /* ─────────────────────────────
