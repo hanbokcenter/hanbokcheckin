@@ -1,132 +1,97 @@
 
 /* =============================================
-   한복체크인 — ABSOLUTE STABLE SYSTEM
-   (NO LOOP / NO DOUBLE INIT / SAFE ARCHITECTURE)
+   HANBOK CHECK-IN — CLEAN SYSTEM
+   NO LOOP / NO FRAMEWORK / NO RECALL
 ============================================= */
 
-(function () {
-  /* ─────────────────────────────
-     GUARD (핵심: 1회 실행 보장)
-  ───────────────────────────── */
-  if (window.__HANBOK_APP__) return;
-  window.__HANBOK_APP__ = true;
+(() => {
 
-  console.log('APP BOOT');
+  /* ─────────────────────────────
+     HARD GUARD (중복 실행 차단)
+  ───────────────────────────── */
+  if (window.__APP__) return;
+  window.__APP__ = true;
+
+  console.log("APP START");
 
   /* ─────────────────────────────
      CONFIG
   ───────────────────────────── */
-  const CONFIG = {
-    OPENSHEET_URL:
-      'https://opensheet.elk.sh/168jH8wNnXTdCa8kHaBl0QXnga33Divzo1U4Q-eg5VBQ/응답',
-    _geoCache: {}
-  };
+  const URL =
+    "https://opensheet.elk.sh/168jH8wNnXTdCa8kHaBl0QXnga33Divzo1U4Q-eg5VBQ/응답";
 
-  /* ─────────────────────────────
-     STATE
-  ───────────────────────────── */
   let map;
   let markers = [];
-  let data = [];
 
   /* ─────────────────────────────
-     INIT MAP (LEAFLET ONLY)
+     INIT MAP (ONE TIME ONLY)
   ───────────────────────────── */
   function initMap() {
-    map = L.map('map', {
+    map = L.map("map", {
       center: [36, 127],
-      zoom: 2.5,
-      worldCopyJump: true
+      zoom: 2.5
     });
 
     L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      {
-        attribution: '&copy; CARTO'
-      }
+      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+      { attribution: "&copy; CARTO" }
     ).addTo(map);
   }
 
   /* ─────────────────────────────
-     GEOCODE (SAFE)
+     FETCH DATA (NO LOOP POSSIBLE)
   ───────────────────────────── */
-  async function geocode(q) {
-    if (!q) return null;
-    if (CONFIG._geoCache[q]) return CONFIG._geoCache[q];
-
-    try {
-      const url =
-        'https://api.mapbox.com/geocoding/v5/mapbox.places/' +
-        encodeURIComponent(q) +
-        `.json?access_token=YOUR_MAPBOX_TOKEN&limit=1`;
-
-      const res = await fetch(url);
-      const json = await res.json();
-
-      const c = json.features?.[0]?.geometry?.coordinates;
-      if (!c) return null;
-
-      const latlng = [c[1], c[0]];
-      CONFIG._geoCache[q] = latlng;
-
-      return latlng;
-    } catch {
-      return null;
-    }
-  }
-
-  /* ─────────────────────────────
-     LOAD DATA (NO LOOP RISK)
-  ───────────────────────────── */
-  async function loadData() {
-    console.log('LOAD START');
-
-    const res = await fetch(CONFIG.OPENSHEET_URL);
+  async function fetchData() {
+    const res = await fetch(URL);
     const rows = await res.json();
 
-    data = rows
+    return rows
       .map((r, i) => ({
         id: i,
-        name: r['닉네임'] || '익명',
-        location: r['체크인 장소명'] || '',
-        city: r['체크인한 도시'] || '',
-        country: r['체크인한 국가'] || ''
+        name: r["닉네임"] || "익명",
+        location: r["체크인 장소명"] || "",
+        country: r["체크인한 국가"] || "",
       }))
       .filter(d => d.location);
-
-    await geocodeAll();
-
-    render();
   }
 
   /* ─────────────────────────────
-     GEOCODE BATCH (SAFE LOOP)
+     SIMPLE GEO (NO CACHE COMPLEXITY)
   ───────────────────────────── */
-  async function geocodeAll() {
-    for (const d of data) {
-      const q = [d.location, d.city, d.country].filter(Boolean).join(',');
-      d.coords = await geocode(q);
-    }
+  async function geocode(q) {
+    const url =
+      "https://api.mapbox.com/geocoding/v5/mapbox.places/" +
+      encodeURIComponent(q) +
+      ".json?access_token=YOUR_MAPBOX_TOKEN&limit=1";
+
+    const res = await fetch(url);
+    const json = await res.json();
+
+    const c = json.features?.[0]?.geometry?.coordinates;
+    if (!c) return null;
+
+    return [c[1], c[0]];
   }
 
   /* ─────────────────────────────
-     RENDER MARKERS (SINGLE SOURCE)
+     RENDER (CLEAN REPLACE ONLY)
   ───────────────────────────── */
-  function render() {
-    console.log('RENDER MAP');
+  function render(data) {
 
-    // cleanup old markers
-    markers.forEach((m) => map.removeLayer(m));
+    // remove old markers
+    markers.forEach(m => map.removeLayer(m));
     markers = [];
 
-    const valid = data.filter((d) => d.coords);
+    const bounds = [];
 
-    valid.forEach((d) => {
+    data.forEach(d => {
+      if (!d.coords) return;
+
       const m = L.circleMarker(d.coords, {
         radius: 6,
-        color: '#fff',
+        color: "#fff",
         weight: 2,
-        fillColor: '#D4402A',
+        fillColor: "#D4402A",
         fillOpacity: 0.9
       }).addTo(map);
 
@@ -137,25 +102,36 @@
       `);
 
       markers.push(m);
+      bounds.push(d.coords);
     });
 
-    if (valid.length) {
-      const group = L.featureGroup(markers);
-      map.fitBounds(group.getBounds(), {
-        padding: [40, 40]
-      });
+    if (bounds.length) {
+      map.fitBounds(bounds, { padding: [50, 50] });
     }
-
-    console.log('RENDER DONE');
   }
 
   /* ─────────────────────────────
-     BOOT (ONLY ONCE)
+     MAIN FLOW (STRICT LINEAR)
   ───────────────────────────── */
-  document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM READY');
+  async function main() {
 
     initMap();
-    loadData();
-  });
+
+    const data = await fetchData();
+
+    // geocode sequential (NO LOOP SIDE EFFECT)
+    for (const d of data) {
+      d.coords = await geocode(d.location + "," + d.country);
+    }
+
+    render(data);
+
+    document.getElementById("loading").style.display = "none";
+  }
+
+  /* ─────────────────────────────
+     BOOT (ONLY ONCE EVER)
+  ───────────────────────────── */
+  document.addEventListener("DOMContentLoaded", main);
+
 })();
