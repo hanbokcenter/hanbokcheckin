@@ -1,7 +1,5 @@
-
 /* =============================================
-   한복체크인 — PRODUCTION SAFE VERSION
-   (NO STYLE MANIPULATION / NO LAYER TOUCHING)
+   한복체크인 — STABLE SCRIPT (FULL REWRITE)
    ============================================= */
 
 /* ─────────────────────────────────────────────
@@ -26,7 +24,7 @@ let currentPage = 1;
 let mbMap = null;
 
 /* ─────────────────────────────────────────────
-   MAP INIT (NO STYLE MANIPULATION)
+   MAP INIT
 ──────────────────────────────────────────── */
 function initMap() {
   mapboxgl.accessToken = CONFIG.MAPBOX_TOKEN;
@@ -43,7 +41,7 @@ function initMap() {
 }
 
 /* ─────────────────────────────────────────────
-   SAFE GEOCODE (CACHE + FAIL SAFE)
+   GEOCODE (SAFE)
 ──────────────────────────────────────────── */
 async function geocode(location, city, country) {
   const query = [location, city, country].filter(Boolean).join(', ');
@@ -60,10 +58,10 @@ async function geocode(location, city, country) {
     if (!res.ok) return null;
 
     const data = await res.json();
-    const coords = data.features?.[0]?.geometry?.coordinates || null;
+    const coords = data.features?.[0]?.geometry?.coordinates;
 
-    CONFIG._geoCache[query] = coords;
-    return coords;
+    CONFIG._geoCache[query] = coords || null;
+    return coords || null;
 
   } catch {
     return null;
@@ -71,14 +69,14 @@ async function geocode(location, city, country) {
 }
 
 /* ─────────────────────────────────────────────
-   GEOCODE BATCH (STABLE)
+   BATCH GEOCODE (STABLE)
 ──────────────────────────────────────────── */
 async function geocodeBatch(items, batchSize = 5) {
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
 
     await Promise.all(
-      batch.map(async item => {
+      batch.map(async (item) => {
         try {
           item.coords = await geocode(item.location, item.city, item.country);
         } catch {
@@ -99,10 +97,7 @@ function toGeoJSON(data) {
     type: 'FeatureCollection',
     features: data.map(d => ({
       type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: d.coords
-      },
+      geometry: { type: 'Point', coordinates: d.coords },
       properties: {
         _id: d._id,
         name: d.name,
@@ -119,7 +114,7 @@ function toGeoJSON(data) {
 }
 
 /* ─────────────────────────────────────────────
-   MAP RENDER (SAFE ONLY)
+   MAP RENDER (SAFE SINGLE SOURCE)
 ──────────────────────────────────────────── */
 function addPinsToMap(data) {
   if (!mbMap || !mbMap.isStyleLoaded()) return;
@@ -167,17 +162,15 @@ function addPinsToMap(data) {
     const lats = valid.map(d => d.coords[1]);
 
     mbMap.fitBounds(
-      [
-        [Math.min(...lngs), Math.min(...lats)],
-        [Math.max(...lngs), Math.max(...lats)]
-      ],
+      [[Math.min(...lngs), Math.min(...lats)],
+       [Math.max(...lngs), Math.max(...lats)]],
       { padding: 80, duration: 800 }
     );
   }
 }
 
 /* ─────────────────────────────────────────────
-   DATA LOAD
+   LOAD DATA
 ──────────────────────────────────────────── */
 async function loadData() {
   let rows;
@@ -185,25 +178,23 @@ async function loadData() {
   try {
     const res = await fetch(CONFIG.OPENSHEET_URL);
     rows = await res.json();
-  } catch (err) {
-    console.error('DATA LOAD FAILED', err);
+  } catch {
+    console.error('DATA LOAD FAILED');
     return;
   }
 
-  const parsed = rows
-    .map((r, i) => ({
-      _id: String(i),
-      name: r['닉네임'] || '익명',
-      instaId: r['인스타그램 ID'] || '',
-      location: r['체크인 장소명'] || '',
-      city: r['체크인한 도시'] || '',
-      country: r['체크인한 국가'] || '',
-      note: r['체크인 한줄소개 🫡'] || '',
-      instaUrl: r['인스타 게시물 URL'] || '',
-      date: r['타임스탬프'] || '',
-      coords: null
-    }))
-    .filter(d => d.location);
+  const parsed = rows.map((r, i) => ({
+    _id: String(i),
+    name: r['닉네임'] || '익명',
+    instaId: r['인스타그램 ID'] || '',
+    location: r['체크인 장소명'] || '',
+    city: r['체크인한 도시'] || '',
+    country: r['체크인한 국가'] || '',
+    note: r['체크인 한줄소개 🫡'] || '',
+    instaUrl: r['인스타 게시물 URL'] || '',
+    date: r['타임스탬프'] || '',
+    coords: null
+  })).filter(d => d.location);
 
   allData = parsed;
 
