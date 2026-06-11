@@ -21,7 +21,7 @@
    체크인한 도시                    ← 폼 질문 4  (geocoding 정확도)
    체크인한 국가                    ← 폼 질문 5  (geocoding 정확도 + 국기)
    체크인 한줄소개 🫡               ← 폼 질문 6
-   인스타그 게시물 url  ← 폼 질문 7
+   URL  ← 폼 질문 7
 */
 
 const CONFIG = {
@@ -530,7 +530,7 @@ async function loadData() {
       city:     r['도시']                            || '',
       country:  r['국가']                            || '',
       note:     r['체크인 한줄소개 🫡']                       || '',
-      instaUrl: r['인스타 게시물 URL']    || '',
+      instaUrl: r['URL']    || '',
       coords:   null,  // geocoding 후 채워짐
     }))
     .filter(r => r.location)   // 장소명 없는 행 제외
