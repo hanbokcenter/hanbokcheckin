@@ -143,7 +143,7 @@ async function geocode(location, city, country) {
     CONFIG._geoCache[query] = coords;
     return coords;
   } catch {
-    return null;
+    return nu인스타 게시물 URLll;
   }
 }
 
