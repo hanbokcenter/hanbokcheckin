@@ -219,7 +219,7 @@ function initMap() {
   mapboxgl.accessToken = CONFIG.MAPBOX_TOKEN;
   mbMap = new mapboxgl.Map({
     container:          'map',
-    style:              'mapbox://styles/mapbox/dark-v11',
+    style:              'mapbox://styles/hanbokcenter/cmq8s5msx004301sm9zmd7sh3',
     center:             [127, 36],
     zoom:               2.5,
     scrollZoom:         true,
