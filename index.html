@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>#한복체크인 — 어디서든, 지금 이 순간</title>
+
   <meta name="description" content="한복을 입고 어디서든 체크인하세요. 전 세계 한복체크인을 한 지도에서 만나보세요." />
 
   <!-- Fonts -->
@@ -11,16 +13,23 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700;900&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
 
-  <!-- Mapbox GL JS -->
-  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet" />
-  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+  <!-- Leaflet CSS (🔥 Mapbox 완전 제거) -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
 
+  <!-- custom style -->
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
-  <!-- ───── 전체화면 지도 (배경) ───── -->
+  <!-- ───── 전체 지도 ───── -->
   <div id="map"></div>
+
+  <!-- ───── Leaflet JS (중요: script보다 먼저) ───── -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <!-- ───── 헤더 ───── -->
   <header class="site-header">
@@ -29,6 +38,7 @@
         <span class="logo-mark">◈</span>
         <span class="logo-text">한복체크인</span>
       </a>
+
       <div class="header-counters">
         <div class="hc-item">
           <span class="hc-num" id="totalCount">—</span>
@@ -40,18 +50,23 @@
           <span class="hc-label">국가</span>
         </div>
       </div>
+
       <a href="#how" class="header-cta">참여하기</a>
     </div>
   </header>
 
-  <!-- ───── 지도 위 히어로 텍스트 ───── -->
+  <!-- ───── 히어로 ───── -->
   <div class="map-hero">
     <p class="map-hero-tag">#한복체크인</p>
-    <h1 class="map-hero-title">어디서든,<br />지금 이 순간을<br /><em>체크인</em>하세요</h1>
+    <h1 class="map-hero-title">
+      어디서든,<br />
+      지금 이 순간을<br />
+      <em>체크인</em>하세요
+    </h1>
     <p class="map-hero-sub">핀을 탭하면 체크인 정보를 볼 수 있어요</p>
   </div>
 
-  <!-- ───── 지도 로딩 오버레이 ───── -->
+  <!-- ───── 로딩 ───── -->
   <div id="mapLoading" class="map-loading">
     <div class="ml-dots"><span></span><span></span><span></span></div>
     <p>체크인 불러오는 중…</p>
@@ -60,76 +75,84 @@
   <!-- ───── 하단 패널 ───── -->
   <div class="bottom-panel">
 
-    <!-- 패널 핸들 (모바일 드래그용) -->
     <div class="panel-handle"></div>
 
-    <!-- 탭 -->
     <div class="panel-tabs">
       <button class="tab-btn active" data-tab="feed">최신 체크인</button>
       <button class="tab-btn" data-tab="stats">국가별 통계</button>
       <button class="tab-btn" data-tab="how">참여방법</button>
     </div>
 
-    <!-- 탭 내용: 최신 체크인 -->
+    <!-- FEED -->
     <div class="tab-content active" id="tab-feed">
       <div id="feedError" class="feed-error hidden">
         <p>데이터를 불러오지 못했어요.</p>
         <button onclick="loadData()" class="btn-ghost btn-sm">다시 시도</button>
       </div>
+
       <div id="feedList" class="feed-list"></div>
+
       <div id="feedMore" class="feed-more hidden">
         <button onclick="loadMore()" class="btn-ghost btn-sm">더 보기</button>
       </div>
     </div>
 
-    <!-- 탭 내용: 국가별 통계 -->
+    <!-- STATS -->
     <div class="tab-content" id="tab-stats">
       <div id="statsGrid" class="stats-grid"></div>
     </div>
 
-    <!-- 탭 내용: 참여방법 -->
+    <!-- HOW -->
     <div class="tab-content" id="tab-how">
       <div class="how-steps">
         <div class="how-step">
           <span class="how-num">1</span>
           <div>
             <strong>한복을 입는다</strong>
-            <p>전통·생활·개량 모두 OK. 처음이라면 대여도 좋아요.</p>
+            <p>전통·생활·개량 모두 OK</p>
           </div>
         </div>
+
         <div class="how-step">
           <span class="how-num">2</span>
           <div>
             <strong>어디서든 찍는다</strong>
-            <p>경복궁부터 편의점, 파리까지 — 장소는 완전 자유예요.</p>
+            <p>장소는 전 세계 어디든 가능</p>
           </div>
         </div>
+
         <div class="how-step">
           <span class="how-num">3</span>
           <div>
-            <strong>폼에 제출한다</strong>
-            <p>장소명, 도시, 국가, 한 줄 소감만 입력하면 끝!</p>
+            <strong>폼 제출</strong>
+            <p>간단한 정보만 입력하면 끝</p>
           </div>
         </div>
+
         <div class="how-step">
           <span class="how-num">4</span>
           <div>
-            <strong>#한복체크인 태그</strong>
-            <p>인스타·틱톡에 올릴 때 해시태그도 달아주세요.</p>
+            <strong>#한복체크인</strong>
+            <p>SNS에 공유해주세요</p>
           </div>
         </div>
       </div>
+
       <a
         href="https://forms.google.com"
         target="_blank"
         rel="noopener"
         class="btn-primary btn-full"
         id="formLink"
-      >체크인 폼 작성하기 →</a>
+      >
+        체크인 폼 작성하기 →
+      </a>
     </div>
 
-  </div><!-- /bottom-panel -->
+  </div>
 
+  <!-- ───── SCRIPT ───── -->
   <script src="script.js"></script>
+
 </body>
 </html>
